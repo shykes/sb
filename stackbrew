@@ -43,6 +43,16 @@ def get_buildpack_cache_root():
 def get_buildpack_cache(buildpack):
     return os.path.join(get_buildpack_cache_root(), buildpack)
 
+def detect_buildpack(source_dir):
+    ref = "{source_dir}/buildpack".format(**locals())
+    if not os.path.exists(ref):
+        return None
+    buildpack = file(ref).readline().strip()
+    buildpack_in_source = "{source_dir}/{buildpack}".format(**locals())
+    if os.path.exists(buildpack_in_source):
+        return buildpack_in_source
+    else:
+        return buildpack
 
 def build_service(build_dir, buildpack):
     """ Build the service in-place at `build_dir` using `buildpack`.
@@ -104,10 +114,15 @@ def cmd_buildreqs(source_dir, buildpack):
     for req in get_buildpack_requirements(get_buildpack_dir(buildpack), source_dir):
         print req
 
-def cmd_build(source_dir, build_dir, buildpack):
+def cmd_build(source_dir, build_dir, buildpack=None):
     """ Build the application source code at `source_dir` into `build_dir`.
         The build will fail if build_dir alread exists.
     """
+    if not buildpack:
+        buildpack = detect_buildpack(source_dir)
+        if not buildpack:
+            print "Could not detect buildpack. Aborting."
+            sys.exit(1)
     print "{source_dir} -> {buildpack}".format(**locals())
     copy(source_dir, build_dir)
     release_config = build_service(build_dir, buildpack)
